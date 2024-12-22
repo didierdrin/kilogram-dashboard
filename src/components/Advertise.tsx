@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { getFirestore, collection, addDoc } from "firebase/firestore";
+import { collection, addDoc } from "firebase/firestore";
 import { firestore as db } from '../../firebaseApp';
 
 const Advertise = () => {

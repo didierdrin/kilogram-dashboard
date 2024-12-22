@@ -1,12 +1,12 @@
 // app/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth } from "../../firebaseApp";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import {
-  linkWithPopup,
+  
   GoogleAuthProvider,
   signInWithPopup,
   signInWithEmailAndPassword,
@@ -22,7 +22,7 @@ const ClientSideRouterHandler = dynamic(
 );
 
 export default function Home() {
-  const [user, loading, error] = useAuthState(auth);
+  const [user, loading] = useAuthState(auth);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);

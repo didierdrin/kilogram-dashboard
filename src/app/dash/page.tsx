@@ -16,7 +16,7 @@ import Help from '@/components/Help';
 import Settings from '@/components/Settings';
 
 export default function Dashboard() {
-  const [user] = useAuthState(auth);
+  //const [user] = useAuthState(auth);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const router = useRouter();

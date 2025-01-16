@@ -33,8 +33,7 @@ export default function Dashboard() {
   const menuItems = [
     { name: 'overview', icon: FaHome, component: Overview },
     { name: 'Garmets', icon: FaBoxes, component: Inventory },
-    { name: 'Current orders', icon: FaShoppingCart, component: CurrentOrders },
-    { name: 'recent orders', icon: FaHistory, component: RecentOrders },
+    { name: 'Orders', icon: FaShoppingCart, component: CurrentOrders },
     { name: 'advertise', icon: FaAd, component: Advertise },
     { name: 'help', icon: FaQuestionCircle, component: Help },
     { name: 'settings', icon: FaCog, component: Settings },
@@ -98,9 +97,7 @@ export default function Dashboard() {
             {/* <FaUser className="bg-white h-8 w-8 p-2 border border-black rounded-lg hover:bg-black hover:text-teal-300 cursor-pointer" /> */}
           </div>
         </div>
-        {/* <h2 className="text-2xl font-bold mb-5">Dashboard</h2>
-        <p className="mb-5">Welcome, {user?.displayName}!</p> */}
-
+       
         <ActiveComponent />
       </div>
     </div>
@@ -108,4 +105,3 @@ export default function Dashboard() {
 }
 
 
-//"flex-1 p-10 overflow-auto">

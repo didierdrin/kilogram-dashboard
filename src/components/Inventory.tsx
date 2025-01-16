@@ -1,263 +1,495 @@
 import { useState, useEffect } from "react";
-import Image from "next/image";
 import {
-  getFirestore,
   collection,
   onSnapshot,
-  query,
   addDoc,
   updateDoc,
   deleteDoc,
   doc,
-  GeoPoint,
-  where,
 } from "firebase/firestore";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { firestore as db } from "../../firebaseApp";
-import { getAuth } from "firebase/auth";
 
-interface ProductData {
+interface GarmentType {
   name: string;
   price: number;
-  description: string;
-  category: string[];
-  brand: string;
-  quantity: number;
-  color: string;
-  size: string;
-  sku: string;
-  cost_price: number;
-  discount_price: number;
-  material: string;
-  care_instructions: string;
-  shipping_weight: number;
-  available_colors: string[];
-  available_sizes: string[];
-  tags: string[];
-  img_url: string;
-  brand_uid: string;
-  date_added: Date;
-  last_updated: Date;
-  is_active: boolean;
-  additional_images: string[];
-  bar_code: string;
-  lead_time: string;
-  product_id: number;
-  reorder_point: GeoPoint;
-  supplier_info: string;
-  tax_category: string;
-  weight: number;
 }
 
-type Product = {
+type GarmentTypeWithId = {
   id: string;
-  data: ProductData;
+  data: GarmentType;
 };
 
 const Inventory = () => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [newProduct, setNewProduct] = useState<ProductData>({
+  const [garmentTypes, setGarmentTypes] = useState<GarmentTypeWithId[]>([]);
+  const [editingGarment, setEditingGarment] = useState<GarmentTypeWithId | null>(null);
+  const [newGarment, setNewGarment] = useState<GarmentType>({
     name: "",
     price: 0,
-    description: "",
-    category: [],
-    brand: "",
-    quantity: 0,
-    color: "",
-    size: "",
-    sku: "",
-    cost_price: 0,
-    discount_price: 0,
-    material: "",
-    care_instructions: "",
-    shipping_weight: 0,
-    available_colors: [],
-    available_sizes: [],
-    tags: [],
-    img_url: "",
-    brand_uid: "",
-    date_added: new Date(),
-    last_updated: new Date(),
-    is_active: true,
-    additional_images: [],
-    bar_code: "",
-    lead_time: "",
-    product_id: 0,
-    reorder_point: new GeoPoint(0, 0),
-    supplier_info: "",
-    tax_category: "",
-    weight: 0,
   });
-  const [image, setImage] = useState<File | null>(null);
-
-  const storage = getStorage();
-  const auth = getAuth();
 
   useEffect(() => {
-    const currentUser = auth.currentUser;
-
-    if (!currentUser) {
-      console.error("No user logged in");
-      return;
-    }
-
-    const q = query(
-      collection(db, "products"),
-      where("brand_uid", "==", currentUser.uid)
-    );
-    // const q = query(
-    //   collection(db, "products"),
-      
-    // );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setProducts(
+    const unsubscribe = onSnapshot(collection(db, "garmentTypeCleaned"), (snapshot) => {
+      setGarmentTypes(
         snapshot.docs.map((doc) => ({
           id: doc.id,
-          data: doc.data() as ProductData,
+          data: doc.data() as GarmentType,
         }))
       );
     });
     return () => unsubscribe();
   }, []);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setImage(e.target.files[0]);
-    }
-  };
-
-  // Safe parsing functions to prevent NaN values
-  const safeParseFloat = (value: string): number => {
-    const parsed = parseFloat(value);
-    return isNaN(parsed) ? 0 : parsed;
-  };
-
-  const safeParseInt = (value: string): number => {
-    const parsed = parseInt(value);
-    return isNaN(parsed) ? 0 : parsed;
-  };
-
-  const handleAddProduct = async (e: React.FormEvent) => {
+  const handleAddGarment = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newGarment.name || newGarment.price <= 0) {
+      alert("Please fill in all fields with valid values");
+      return;
+    }
+
     try {
-      let img_url = "";
-      if (image) {
-        const storageRef = ref(storage, `product_images/${image.name}`);
-        await uploadBytes(storageRef, image);
-        img_url = await getDownloadURL(storageRef);
-      }
-
-      const currentUser = auth.currentUser;
-      if (!currentUser) {
-        console.error("No user logged in");
-        return;
-      }
-
-      const productData: ProductData = {
-        ...newProduct,
-        img_url,
-        brand_uid: currentUser.uid,
-        date_added: new Date(),
-        last_updated: new Date(),
-        is_active: true,
-        reorder_point: new GeoPoint(0, 0), // Default value, update as needed
-      };
-
-      await addDoc(collection(db, "products"), productData);
-      setNewProduct({
+      await addDoc(collection(db, "garmentTypeCleaned"), {
+        name: newGarment.name,
+        price: newGarment.price,
+      });
+      setNewGarment({
         name: "",
         price: 0,
-        description: "",
-        category: [],
-        brand: "",
-        quantity: 0,
-        color: "",
-        size: "",
-        sku: "",
-        cost_price: 0,
-        discount_price: 0,
-        material: "",
-        care_instructions: "",
-        shipping_weight: 0,
-        available_colors: [],
-        available_sizes: [],
-        tags: [],
-        img_url: "",
-        brand_uid: "",
-        date_added: new Date(),
-        last_updated: new Date(),
-        is_active: true,
-        additional_images: [],
-        bar_code: "",
-        lead_time: "",
-        product_id: 0,
-        reorder_point: new GeoPoint(0, 0),
-        supplier_info: "",
-        tax_category: "",
-        weight: 0,
       });
-      setImage(null);
     } catch (error) {
-      console.error("Error adding product: ", error);
+      console.error("Error adding garment type: ", error);
+      alert("Failed to add garment type");
     }
   };
 
-  const handleUpdateProduct = async (e: React.FormEvent) => {
+  const handleUpdateGarment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingProduct) return;
+    if (!editingGarment) return;
+
     try {
-      const updatedData: Partial<ProductData> = {
-        ...editingProduct.data,
-        last_updated: new Date(),
-      };
-      await updateDoc(doc(db, "products", editingProduct.id), updatedData);
-      setEditingProduct(null);
+      await updateDoc(doc(db, "garmentTypeCleaned", editingGarment.id), {
+        name: editingGarment.data.name,
+        price: editingGarment.data.price,
+      });
+      setEditingGarment(null);
     } catch (error) {
-      console.error("Error updating product: ", error);
+      console.error("Error updating garment type: ", error);
+      alert("Failed to update garment type");
     }
   };
 
-  const handleDeleteProduct = async (id: string) => {
+  const handleDeleteGarment = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this garment type?")) return;
+
     try {
-      await deleteDoc(doc(db, "products", id));
+      await deleteDoc(doc(db, "garmentTypeCleaned", id));
     } catch (error) {
-      console.error("Error deleting product: ", error);
+      console.error("Error deleting garment type: ", error);
+      alert("Failed to delete garment type");
     }
   };
-
-  
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-md">
-      <h3 className="text-xl font-semibold mb-4">Garmets - Cleaning services</h3>
+      <h3 className="text-xl font-semibold mb-4">Garment Types Management</h3>
 
-      <form onSubmit={handleAddProduct} className="mb-8">
-        <h4 className="text-lg font-medium mb-2">Add New Product</h4>
-        <div className="grid grid-cols-2 gap-4">
+      <form onSubmit={handleAddGarment} className="mb-8">
+        <h4 className="text-lg font-medium mb-4">Add New Garment Type</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <input
             type="text"
-            placeholder="Product Name"
-            value={newProduct.name}
+            placeholder="Garment Name"
+            value={newGarment.name}
             onChange={(e) =>
-              setNewProduct({ ...newProduct, name: e.target.value })
+              setNewGarment({ ...newGarment, name: e.target.value })
             }
-            className="p-2 border rounded"
+            className="p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
           <input
             type="number"
-            placeholder="Price"
-            // value={newProduct.price}
-            value={newProduct.price === 0 ? '' : newProduct.price}
+            placeholder="Price (RWF)"
+            value={newGarment.price === 0 ? '' : newGarment.price}
             onChange={(e) =>
-              setNewProduct({
-                ...newProduct,
-                price: safeParseFloat(e.target.value),
+              setNewGarment({
+                ...newGarment,
+                price: parseFloat(e.target.value) || 0,
               })
             }
-            className="p-2 border rounded"
+            className="p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
-          <input
+        </div>
+        <button
+          type="submit"
+          className="mt-4 bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded transition duration-200"
+        >
+          Add Garment Type
+        </button>
+      </form>
+
+      <div className="mb-6">
+        <h3 className="text-lg font-medium mb-4">Current Garment Types</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {garmentTypes.map(({ id, data }) => (
+            <div key={id} className="border rounded-lg p-4 hover:shadow-md transition duration-200">
+              <div className="flex justify-between items-start mb-3">
+                <h4 className="font-semibold text-lg">{data.name}</h4>
+                <span className="font-medium text-green-600">RWF {data.price.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-end space-x-3 mt-4">
+                <button
+                  onClick={() => setEditingGarment({ id, data })}
+                  className="text-blue-500 hover:text-blue-700 font-medium transition duration-200"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDeleteGarment(id)}
+                  className="text-red-500 hover:text-red-700 font-medium transition duration-200"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Edit Modal */}
+      {editingGarment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-xl font-semibold mb-4">Edit Garment Type</h3>
+            <form onSubmit={handleUpdateGarment} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Name</label>
+                <input
+                  type="text"
+                  value={editingGarment.data.name}
+                  onChange={(e) =>
+                    setEditingGarment({
+                      ...editingGarment,
+                      data: { ...editingGarment.data, name: e.target.value },
+                    })
+                  }
+                  className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Price (RWF)</label>
+                <input
+                  type="number"
+                  value={editingGarment.data.price}
+                  onChange={(e) =>
+                    setEditingGarment({
+                      ...editingGarment,
+                      data: {
+                        ...editingGarment.data,
+                        price: parseFloat(e.target.value) || 0,
+                      },
+                    })
+                  }
+                  className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setEditingGarment(null)}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition duration-200"
+                >
+                  Update
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default Inventory;
+
+// import { useState, useEffect } from "react";
+// import Image from "next/image";
+// import {
+//   getFirestore,
+//   collection,
+//   onSnapshot,
+//   query,
+//   addDoc,
+//   updateDoc,
+//   deleteDoc,
+//   doc,
+//   GeoPoint,
+//   where,
+// } from "firebase/firestore";
+// import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+// import { firestore as db } from "../../firebaseApp";
+// import { getAuth } from "firebase/auth";
+
+// interface ProductData {
+//   name: string;
+//   price: number;
+ 
+// }
+
+// type Product = {
+//   id: string;
+//   data: ProductData;
+// };
+
+// const Inventory = () => {
+//   const [products, setProducts] = useState<Product[]>([]);
+//   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+//   const [newProduct, setNewProduct] = useState<ProductData>({
+//     name: "",
+//     price: 0,
+    
+//   });
+//   const [image, setImage] = useState<File | null>(null);
+
+//   const storage = getStorage();
+//   const auth = getAuth();
+
+//   useEffect(() => {
+//     const currentUser = auth.currentUser;
+
+//     if (!currentUser) {
+//       console.error("No user logged in");
+//       return;
+//     }
+
+//     const q = query(
+//       collection(db, "products"),
+//       where("brand_uid", "==", currentUser.uid)
+//     );
+//     // const q = query(
+//     //   collection(db, "products"),
+      
+//     // );
+//     const unsubscribe = onSnapshot(q, (snapshot) => {
+//       setProducts(
+//         snapshot.docs.map((doc) => ({
+//           id: doc.id,
+//           data: doc.data() as ProductData,
+//         }))
+//       );
+//     });
+//     return () => unsubscribe();
+//   }, []);
+
+//   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+//     if (e.target.files) {
+//       setImage(e.target.files[0]);
+//     }
+//   };
+
+//   // Safe parsing functions to prevent NaN values
+//   const safeParseFloat = (value: string): number => {
+//     const parsed = parseFloat(value);
+//     return isNaN(parsed) ? 0 : parsed;
+//   };
+
+//   const safeParseInt = (value: string): number => {
+//     const parsed = parseInt(value);
+//     return isNaN(parsed) ? 0 : parsed;
+//   };
+
+//   const handleAddProduct = async (e: React.FormEvent) => {
+//     e.preventDefault();
+//     try {
+//       let img_url = "";
+//       if (image) {
+//         const storageRef = ref(storage, `product_images/${image.name}`);
+//         await uploadBytes(storageRef, image);
+//         img_url = await getDownloadURL(storageRef);
+//       }
+
+//       const currentUser = auth.currentUser;
+//       if (!currentUser) {
+//         console.error("No user logged in");
+//         return;
+//       }
+
+//       const productData: ProductData = {
+//         ...newProduct,
+     
+//       };
+
+//       await addDoc(collection(db, "products"), productData);
+//       setNewProduct({
+//         name: "",
+//         price: 0,
+       
+//       });
+//       setImage(null);
+//     } catch (error) {
+//       console.error("Error adding product: ", error);
+//     }
+//   };
+
+//   const handleUpdateProduct = async (e: React.FormEvent) => {
+//     e.preventDefault();
+//     if (!editingProduct) return;
+//     try {
+//       const updatedData: Partial<ProductData> = {
+//         ...editingProduct.data,
+        
+//       };
+//       await updateDoc(doc(db, "products", editingProduct.id), updatedData);
+//       setEditingProduct(null);
+//     } catch (error) {
+//       console.error("Error updating product: ", error);
+//     }
+//   };
+
+//   const handleDeleteProduct = async (id: string) => {
+//     try {
+//       await deleteDoc(doc(db, "products", id));
+//     } catch (error) {
+//       console.error("Error deleting product: ", error);
+//     }
+//   };
+
+  
+
+//   return (
+//     <div className="bg-white p-6 rounded-lg shadow-md">
+//       <h3 className="text-xl font-semibold mb-4">Garments - Cleaning services</h3>
+
+//       <form onSubmit={handleAddProduct} className="mb-8">
+//         <h4 className="text-lg font-medium mb-2">Add New Product</h4>
+//         <div className="grid grid-cols-2 gap-4">
+//           <input
+//             type="text"
+//             placeholder="Product Name"
+//             value={newProduct.name}
+//             onChange={(e) =>
+//               setNewProduct({ ...newProduct, name: e.target.value })
+//             }
+//             className="p-2 border rounded"
+//           />
+//           <input
+//             type="number"
+//             placeholder="Price"
+//             // value={newProduct.price}
+//             value={newProduct.price === 0 ? '' : newProduct.price}
+//             onChange={(e) =>
+//               setNewProduct({
+//                 ...newProduct,
+//                 price: safeParseFloat(e.target.value),
+//               })
+//             }
+//             className="p-2 border rounded"
+//           />
+          
+//         </div>
+//         <button
+//           type="submit"
+//           className="mt-4 bg-blue-500 hover:bg-blue-700  text-white px-4 py-2 rounded"
+//         >
+//           Add Product
+//         </button>
+//       </form>
+
+//       <h3 className="mb-6 text-xl font-medium">Already supported garment types</h3>
+//       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+//         {products.map(({ id, data }) => (
+//           <div key={id} className="border p-4 rounded">
+            
+//             <h4 className="font-bold mt-2">{data.name}</h4>
+//             <p className="font-normalbold mb-2">RWF {data.price}</p>
+//             <hr className="mb-2" />
+            
+//             <hr className="mt-2" />
+//             <div className="flex space-x-4  mt-2">
+//               <button
+//                 onClick={() => setEditingProduct({ id, data })}
+//                 className="mr-2 text-blue-500 hover:text-blue-700 hover:translate-x-1"
+//               >
+//                 Edit
+//               </button>
+
+//               <button
+//                 onClick={() => handleDeleteProduct(id)}
+//                 className="text-red-500 hover:text-red-700 hover:translate-x-1"
+//               >
+//                 Delete
+//               </button>
+//             </div>
+//           </div>
+//         ))}
+//       </div>
+
+//       {editingProduct && (
+//         <div
+//           className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full"
+//           id="my-modal"
+//         >
+//           <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+//             <h3 className="text-lg font-medium leading-6 text-gray-900 mb-2">
+//               Edit Product
+//             </h3>
+//             <form onSubmit={handleUpdateProduct}>
+//               <input
+//                 type="text"
+//                 value={editingProduct.data.name}
+//                 onChange={(e) =>
+//                   setEditingProduct({
+//                     ...editingProduct,
+//                     data: { ...editingProduct.data, name: e.target.value },
+//                   })
+//                 }
+//                 className="block w-full p-2 mb-2 border rounded"
+//               />
+//               <input
+//                 type="number"
+//                 value={editingProduct.data.price}
+//                 onChange={(e) =>
+//                   setEditingProduct({
+//                     ...editingProduct,
+//                     data: {
+//                       ...editingProduct.data,
+//                       price: parseFloat(e.target.value),
+//                     },
+//                   })
+//                 }
+//                 className="block w-full p-2 mb-2 border rounded"
+//               />
+             
+//               <button
+//                 type="submit"
+//                 className="bg-blue-500 text-white px-4 py-2 rounded mr-2"
+//               >
+//                 Update
+//               </button>
+//               <button
+//                 onClick={() => setEditingProduct(null)}
+//                 className="bg-gray-300 px-4 py-2 rounded"
+//               >
+//                 Cancel
+//               </button>
+//             </form>
+//           </div>
+//         </div>
+//       )}
+//     </div>
+//   );
+// };
+
+// export default Inventory;
+
+
+
+
+
+{/* <input
             type="text"
             placeholder="Description"
             value={newProduct.description}
@@ -486,382 +718,4 @@ const Inventory = () => {
             type="file"
             onChange={handleImageChange}
             className="p-2 border rounded"
-          />
-        </div>
-        <button
-          type="submit"
-          className="mt-4 bg-blue-500 hover:bg-blue-700  text-white px-4 py-2 rounded"
-        >
-          Add Product
-        </button>
-      </form>
-
-      <h3 className="mb-6 text-xl font-medium">Already supported garmet types</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {products.map(({ id, data }) => (
-          <div key={id} className="border p-4 rounded">
-            <Image
-              src={data.img_url}
-              priority
-              alt="Loading..."
-              width={200}
-              height={200}
-            />
-            <h4 className="font-bold mt-2">{data.name}</h4>
-            <p className="font-normalbold mb-2">RWF {data.price}</p>
-            <hr className="mb-2" />
-            <p>Category: {data?.category?.join(", ")}</p>
-            <p>Brand: {data.brand}</p>
-            <p>Quantity: {data.quantity}</p>
-            <p>Color: {data.color}</p>
-            <p>Size: {data.size}</p>
-            <p>SKU: {data.sku}</p>
-            <hr className="mt-2" />
-            <div className="flex space-x-4  mt-2">
-              <button
-                onClick={() => setEditingProduct({ id, data })}
-                className="mr-2 text-blue-500 hover:text-blue-700 hover:translate-x-1"
-              >
-                Edit
-              </button>
-
-              <button
-                onClick={() => handleDeleteProduct(id)}
-                className="text-red-500 hover:text-red-700 hover:translate-x-1"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {editingProduct && (
-        <div
-          className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full"
-          id="my-modal"
-        >
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <h3 className="text-lg font-medium leading-6 text-gray-900 mb-2">
-              Edit Product
-            </h3>
-            <form onSubmit={handleUpdateProduct}>
-              <input
-                type="text"
-                value={editingProduct.data.name}
-                onChange={(e) =>
-                  setEditingProduct({
-                    ...editingProduct,
-                    data: { ...editingProduct.data, name: e.target.value },
-                  })
-                }
-                className="block w-full p-2 mb-2 border rounded"
-              />
-              <input
-                type="number"
-                value={editingProduct.data.price}
-                onChange={(e) =>
-                  setEditingProduct({
-                    ...editingProduct,
-                    data: {
-                      ...editingProduct.data,
-                      price: parseFloat(e.target.value),
-                    },
-                  })
-                }
-                className="block w-full p-2 mb-2 border rounded"
-              />
-              <input
-                type="text"
-                value={editingProduct.data.description}
-                onChange={(e) =>
-                  setEditingProduct({
-                    ...editingProduct,
-                    data: {
-                      ...editingProduct.data,
-                      description: e.target.value,
-                    },
-                  })
-                }
-                className="block w-full p-2 mb-2 border rounded"
-              />
-              <input
-                type="text"
-                value={editingProduct.data?.category?.join(",")}
-                onChange={(e) =>
-                  setEditingProduct({
-                    ...editingProduct,
-                    data: {
-                      ...editingProduct.data,
-                      category: e.target.value.split(","),
-                    },
-                  })
-                }
-                className="block w-full p-2 mb-2 border rounded"
-              />
-              <input
-                type="text"
-                value={editingProduct.data.brand}
-                onChange={(e) =>
-                  setEditingProduct({
-                    ...editingProduct,
-                    data: { ...editingProduct.data, brand: e.target.value },
-                  })
-                }
-                className="block w-full p-2 mb-2 border rounded"
-              />
-              <input
-                type="number"
-                value={editingProduct.data.quantity}
-                onChange={(e) =>
-                  setEditingProduct({
-                    ...editingProduct,
-                    data: {
-                      ...editingProduct.data,
-                      quantity: parseInt(e.target.value),
-                    },
-                  })
-                }
-                className="block w-full p-2 mb-2 border rounded"
-              />
-              <input
-                type="text"
-                value={editingProduct.data.color}
-                onChange={(e) =>
-                  setEditingProduct({
-                    ...editingProduct,
-                    data: { ...editingProduct.data, color: e.target.value },
-                  })
-                }
-                className="block w-full p-2 mb-2 border rounded"
-              />
-              <input
-                type="text"
-                value={editingProduct.data.size}
-                onChange={(e) =>
-                  setEditingProduct({
-                    ...editingProduct,
-                    data: { ...editingProduct.data, size: e.target.value },
-                  })
-                }
-                className="block w-full p-2 mb-2 border rounded"
-              />
-              <input
-                type="text"
-                value={editingProduct.data.sku}
-                onChange={(e) =>
-                  setEditingProduct({
-                    ...editingProduct,
-                    data: { ...editingProduct.data, sku: e.target.value },
-                  })
-                }
-                className="block w-full p-2 mb-2 border rounded"
-              />
-              <input
-                type="number"
-                value={editingProduct.data.cost_price}
-                onChange={(e) =>
-                  setEditingProduct({
-                    ...editingProduct,
-                    data: {
-                      ...editingProduct.data,
-                      cost_price: parseFloat(e.target.value),
-                    },
-                  })
-                }
-                className="block w-full p-2 mb-2 border rounded"
-              />
-              <input
-                type="number"
-                value={editingProduct.data.discount_price}
-                onChange={(e) =>
-                  setEditingProduct({
-                    ...editingProduct,
-                    data: {
-                      ...editingProduct.data,
-                      discount_price: parseFloat(e.target.value),
-                    },
-                  })
-                }
-                className="block w-full p-2 mb-2 border rounded"
-              />
-              <input
-                type="text"
-                value={editingProduct.data.material}
-                onChange={(e) =>
-                  setEditingProduct({
-                    ...editingProduct,
-                    data: { ...editingProduct.data, material: e.target.value },
-                  })
-                }
-                className="block w-full p-2 mb-2 border rounded"
-              />
-              <input
-                type="text"
-                value={editingProduct.data.care_instructions}
-                onChange={(e) =>
-                  setEditingProduct({
-                    ...editingProduct,
-                    data: {
-                      ...editingProduct.data,
-                      care_instructions: e.target.value,
-                    },
-                  })
-                }
-                className="block w-full p-2 mb-2 border rounded"
-              />
-              <input
-                type="number"
-                value={editingProduct.data.shipping_weight}
-                onChange={(e) =>
-                  setEditingProduct({
-                    ...editingProduct,
-                    data: {
-                      ...editingProduct.data,
-                      shipping_weight: parseFloat(e.target.value),
-                    },
-                  })
-                }
-                className="block w-full p-2 mb-2 border rounded"
-              />
-              <input
-                type="text"
-                value={editingProduct.data?.available_colors?.join(",")}
-                onChange={(e) =>
-                  setEditingProduct({
-                    ...editingProduct,
-                    data: {
-                      ...editingProduct.data,
-                      available_colors: e.target.value.split(","),
-                    },
-                  })
-                }
-                className="block w-full p-2 mb-2 border rounded"
-              />
-              <input
-                type="text"
-                value={editingProduct.data?.available_sizes?.join(",")}
-                onChange={(e) =>
-                  setEditingProduct({
-                    ...editingProduct,
-                    data: {
-                      ...editingProduct.data,
-                      available_sizes: e.target.value.split(","),
-                    },
-                  })
-                }
-                className="block w-full p-2 border rounded"
-              />
-              <input
-                type="text"
-                value={editingProduct.data?.tags?.join(",")}
-                onChange={(e) =>
-                  setEditingProduct({
-                    ...editingProduct,
-                    data: {
-                      ...editingProduct.data,
-                      tags: e.target.value.split(","),
-                    },
-                  })
-                }
-                className="block w-full p-2 mb-2 border rounded"
-              />
-              <input
-                type="text"
-                value={editingProduct.data.bar_code}
-                onChange={(e) =>
-                  setEditingProduct({
-                    ...editingProduct,
-                    data: { ...editingProduct.data, bar_code: e.target.value },
-                  })
-                }
-                className="block w-full p-2 mb-2 border rounded"
-              />
-              <input
-                type="text"
-                value={editingProduct.data.lead_time}
-                onChange={(e) =>
-                  setEditingProduct({
-                    ...editingProduct,
-                    data: { ...editingProduct.data, lead_time: e.target.value },
-                  })
-                }
-                className="block w-full p-2 mb-2 border rounded"
-              />
-              <input
-                type="number"
-                value={editingProduct.data.product_id}
-                onChange={(e) =>
-                  setEditingProduct({
-                    ...editingProduct,
-                    data: {
-                      ...editingProduct.data,
-                      product_id: parseInt(e.target.value),
-                    },
-                  })
-                }
-                className="block w-full p-2 mb-2 border rounded"
-              />
-              <input
-                type="text"
-                value={editingProduct.data.supplier_info}
-                onChange={(e) =>
-                  setEditingProduct({
-                    ...editingProduct,
-                    data: {
-                      ...editingProduct.data,
-                      supplier_info: e.target.value,
-                    },
-                  })
-                }
-                className="block w-full p-2 mb-2 border rounded"
-              />
-              <input
-                type="text"
-                value={editingProduct.data.tax_category}
-                onChange={(e) =>
-                  setEditingProduct({
-                    ...editingProduct,
-                    data: {
-                      ...editingProduct.data,
-                      tax_category: e.target.value,
-                    },
-                  })
-                }
-                className="block w-full p-2 mb-2 border rounded"
-              />
-              <input
-                type="number"
-                value={editingProduct.data.weight}
-                onChange={(e) =>
-                  setEditingProduct({
-                    ...editingProduct,
-                    data: {
-                      ...editingProduct.data,
-                      weight: parseFloat(e.target.value),
-                    },
-                  })
-                }
-                className="block w-full p-2 mb-2 border rounded"
-              />
-              <button
-                type="submit"
-                className="bg-blue-500 text-white px-4 py-2 rounded mr-2"
-              >
-                Update
-              </button>
-              <button
-                onClick={() => setEditingProduct(null)}
-                className="bg-gray-300 px-4 py-2 rounded"
-              >
-                Cancel
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-export default Inventory;
+          /> */}

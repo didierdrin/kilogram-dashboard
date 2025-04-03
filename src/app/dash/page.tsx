@@ -32,7 +32,7 @@ export default function Dashboard() {
 
   const menuItems = [
     { name: 'overview', icon: FaHome, component: Overview },
-    { name: 'Garmets', icon: FaBoxes, component: Inventory },
+    { name: 'Garments', icon: FaBoxes, component: Inventory },
     { name: 'Orders', icon: FaShoppingCart, component: CurrentOrders },
     { name: 'advertise', icon: FaAd, component: Advertise },
     { name: 'help', icon: FaQuestionCircle, component: Help },
